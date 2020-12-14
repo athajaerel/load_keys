@@ -1,0 +1,28 @@
+---
+# slightly more refined technique
+- name: Add keys to all owned ssh caches
+  hosts: localhost
+  vars:
+    wisp_full_path: /dev/shm/wisp.bash
+  vars_files:
+  - vars/keys.yml
+  - vaults/key_passwords.yml
+  gather_facts: False
+  tasks:
+
+  # TO DO: remove my hardcoded user name and get from env
+
+  # Get the keys into all correctly owned ssh agents
+  - register: sshAuthSock
+    failed_when: False
+    command:
+      cmd: find /tmp -name agent.* -user adam.richardson
+
+  # TO DO: if no results, run ssh-agent and use that value in nest 0
+
+  - include_tasks: block_load_keys.yml
+    with_nested:
+    - '{{ sshAuthSock.stdout_lines }}'
+    - '{{ keys }}'
+
+...
