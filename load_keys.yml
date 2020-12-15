@@ -10,13 +10,13 @@
   gather_facts: False
   tasks:
 
-  # TO DO: remove my hardcoded user name and get from env
-
   # Get the keys into all correctly owned ssh agents
+  # Default to user 'nobody' as this will find no agents and default to a no-op,
+  # rather than silently run with '' and do who knows what
   - register: sshAuthSock
     failed_when: False
     command:
-      cmd: find /tmp -name agent.* -user adam.richardson
+      cmd: find /tmp -name agent.* -user {{ lookup('env', 'USER') | default('nobody') }}
 
   # TO DO: if no results, run ssh-agent and use that value in nest 0
 
