@@ -1,10 +1,12 @@
 ---
 # If key exists...
 - register: keyExists
+  become: no
   stat:
     path: '{{ item[1].path }}'
 
 - when: keyExists.stat.exists
+  become: no
   block:
 
   # Create RAM disk temp password wisp script

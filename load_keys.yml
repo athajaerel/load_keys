@@ -14,6 +14,7 @@
   # Default to user 'nobody' as this will find no agents and default to a no-op,
   # rather than silently run with '' and do who knows what
   - register: sshAuthSock
+    become: no
     failed_when: False
     command:
       cmd: find /tmp -name agent.* -user {{ lookup('env', 'USER') | default('nobody') }}
