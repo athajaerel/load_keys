@@ -29,5 +29,4 @@
   - file:
       path: '{{ wisp_full_path }}'
       state: absent
-
 ...
