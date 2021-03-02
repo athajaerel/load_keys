@@ -1,16 +1,19 @@
 ---
 # If key exists...
-- register: keyExists
+- name: Test if key exists
+  register: keyExists
   become: no
   stat:
     path: '{{ item[1].path }}'
 
-- when: keyExists.stat.exists
+- name: Enter block if key exists
+  when: keyExists.stat.exists
   become: no
   block:
 
   # Create RAM disk temp password wisp script
-  - copy:
+  - name: Create wisp script
+    copy:
       dest: '{{ wisp_full_path }}'
       content: |
         #!/bin/bash
@@ -18,7 +21,8 @@
       mode: '0755'
 
   # Using wisp, add key to ssh agent
-  - environment:
+  - name: Add key to ssh agent
+    environment:
       SSH_AUTH_SOCK: '{{ item[0] }}'
       SSH_ASKPASS: '{{ wisp_full_path }}'
       DISPLAY: ''
@@ -26,7 +30,8 @@
       cmd: ssh-add {{ item[1].path }}
 
   # Delete wisp (TO DO: make self deleting)
-  - file:
+  - name: Destroy wisp script
+    file:
       path: '{{ wisp_full_path }}'
       state: absent
 ...

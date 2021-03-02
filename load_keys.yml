@@ -13,7 +13,8 @@
   # Get the keys into all correctly owned ssh agents
   # Default to user 'nobody' as this will find no agents and default to a no-op,
   # rather than silently run with '' and do who knows what
-  - register: sshAuthSock
+  - name: Find all agents owned by this user
+    register: sshAuthSock
     become: no
     failed_when: False
     command:
@@ -21,9 +22,9 @@
 
   # TO DO: if no results, run ssh-agent and use that value in nest 0
 
-  - include_tasks: block_load_keys.yml
+  - name: Load keys into agents
+    include_tasks: block_load_keys.yml
     with_nested:
     - '{{ sshAuthSock.stdout_lines }}'
     - '{{ keys }}'
-
 ...
