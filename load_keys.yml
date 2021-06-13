@@ -2,6 +2,8 @@
 # slightly more refined technique
 - name: Add keys to all owned ssh caches
   hosts: localhost
+  connection: local
+  run_once: yes
   vars:
     wisp_full_path: /dev/shm/wisp.bash
   vars_files:
