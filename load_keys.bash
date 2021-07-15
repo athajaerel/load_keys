@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 SSH_SOCK=/tmp/ssh-agent-${USER}-screen
 AGENT_LIST=$(/bin/find /tmp/ssh-* -name agent\* -user ${USER} | /bin/head -1)
 
