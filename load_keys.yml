@@ -1,31 +1,37 @@
 ---
-# slightly more refined technique
-- name: Add keys to all owned ssh caches
-  hosts: localhost
-  connection: local
+- name: 'Add keys to all owned ssh caches'
+  hosts: 'localhost'
+  connection: 'local'
   run_once: yes
   vars:
-    wisp_full_path: /dev/shm/wisp.bash
+    wisp_full_path: '/dev/shm/wisp.bash'
   vars_files:
-  - vaults/keys.yml
-  gather_facts: False
+    - 'vaults/keys.yml'
+  gather_facts: no
   tasks:
 
-  # Get the keys into all correctly owned ssh agents
-  # Default to user 'nobody' as this will find no agents and default to a no-op,
-  # rather than silently run with '' and do who knows what
-  - name: Find all agents owned by this user
-    register: sshAuthSock
-    become: no
-    failed_when: False
-    command:
-      cmd: find /tmp -name agent.* -user {{ lookup('env', 'USER') | default('nobody') }}
+    # Get the keys into all correctly owned ssh agents
+    # Default to user 'nobody' as this will find no agents and default
+    # to a no-op, rather than silently run with '' and do who knows
+    # what
+    - name: 'Find all agents owned by this user'
+      register: sshAuthSock
+      become: no
+      failed_when: False
+      command:
+        argv:
+          - 'find'
+          - '/tmp'
+          - '-name'
+          - 'agent.*'
+          - '-user'
+          - '{{ lookup("env", "USER") | default("nobody") }}'
 
-  # TO DO: if no results, run ssh-agent and use that value in nest 0
+    # TO DO: if no results, run ssh-agent and use that value in nest 0
 
-  - name: Load keys into agents
-    include_tasks: block_load_keys.yml
-    with_nested:
-    - '{{ sshAuthSock.stdout_lines }}'
-    - '{{ keys }}'
+    - name: 'Load keys into agents'
+      include_tasks: 'block_load_keys.yml'
+      with_nested:
+        - '{{ sshAuthSock.stdout_lines }}'
+        - '{{ keys }}'
 ...
