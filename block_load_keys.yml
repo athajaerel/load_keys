@@ -17,7 +17,7 @@
       dest: '{{ wisp_full_path }}'
       content: |
         #!/bin/bash
-        echo {{ passwords[item[1].name] }}
+        echo {{ item.password }}
       mode: '0755'
 
   # Using wisp, add key to ssh agent
