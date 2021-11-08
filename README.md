@@ -1,6 +1,6 @@
 # load_keys
 
-Two (possibly three) files needed for this to work:
+One file (plus one optionally) needed for this to work:
 
 ## vaults/keys.yml
 
@@ -8,16 +8,10 @@ Two (possibly three) files needed for this to work:
     - keys:
       - name: key1
         path: ~/.ssh/id_rsa
+        password: !vault | etc. encrypted password
       - name: another
         path: /add/as/many/as/you/like
-    ...
-
-## vaults/key_passwords.yml
-
-    ---
-    - passwords:
-        key1: !vault | etc. encrypted password
-        another: or_plaintext_for_the_foolhardy
+        password: or_plaintext_for_the_foolhardy
     ...
 
 ## vaults/secret.txt (optional)
