@@ -7,7 +7,7 @@
   vars:
     wisp_full_path: /dev/shm/wisp.bash
   vars_files:
-  - vars/keys.yml
+  - vaults/keys.yml
   - vaults/key_passwords.yml
   gather_facts: False
   tasks:

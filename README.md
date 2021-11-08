@@ -2,7 +2,7 @@
 
 Two (possibly three) files needed for this to work:
 
-## vars/keys.yml
+## vaults/keys.yml
 
     ---
     - keys:
