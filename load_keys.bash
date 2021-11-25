@@ -13,8 +13,4 @@ else
 fi
 
 [ -h ${SSH_SOCK} ] || /bin/ln -s ${AGENT_LIST} ${SSH_SOCK}
-/usr/bin/ansible-playbook \
-	${ME_DIR}/load_keys.yml \
-	-i ${ME_DIR}/inventory \
-	-e ansible_python_interpreter=auto_legacy_silent \
-	$*
+/usr/bin/ansible-playbook ${ME_DIR}/load_keys.yml ${SECRET}
