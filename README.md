@@ -17,5 +17,5 @@ One file (plus one optionally) needed for this to work:
 ## vaults/secret.txt (optional)
 
 Maybe store the vault password in here, chmod'd 0400 for convenience... or not.
-Add the `vault_password_file` option to ansible.cfg to automate it.
+~~Add the `vault_password_file` option to ansible.cfg to automate it.~~ If the secret file exists it will be used automatically.
 
