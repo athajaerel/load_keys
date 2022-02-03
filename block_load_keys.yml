@@ -23,7 +23,7 @@
     # Using wisp, add key to ssh agent
     - name: 'Add key to ssh agent'
       environment:
-        SSH_AUTH_SOCK: '{{ item[0] }}'
+        SSH_AUTH_SOCK: '{{ item[0].path }}'
         SSH_ASKPASS: '{{ wisp_full_path }}'
         DISPLAY: ''
       command:
