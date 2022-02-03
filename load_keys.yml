@@ -30,8 +30,8 @@
     # TO DO: if no results, run ssh-agent and use that value in nest 0
 
     - name: 'Load keys into agents'
-      include_tasks: 'block_load_keys.yml'
       with_nested:
         - '{{ sshAuthSock.stdout_lines }}'
         - '{{ keys }}'
+      include_tasks: 'block_load_keys.yml'
 ...
