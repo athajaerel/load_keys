@@ -9,14 +9,15 @@ from pwd import getpwuid
 
 from config import *
 
-USER=environ.get('USER')
+USER=environ.get(r'USER')
 ME_DIR=path[0]
-SECRET=realpath('%s/vaults/secret.txt' % ME_DIR)
+SECRET=realpath(r'%s/vaults/secret.txt' % ME_DIR)
+WISP_PATH=r'/dev/shm/wisp.bash'
 
 def debug(line, prefix=None):
   if (DEBUG_MODE):
     if (prefix):
-      print('%s: %s' % (prefix, line))
+      print(r'%s: %s' % (prefix, line))
     else:
       print(line)
 
@@ -28,7 +29,7 @@ def issock(filename):
 
 def find_ssh_agents():
   # find all ssh agents
-  agent_dirs=glob('%s/ssh-*' % TMPDIR)
+  agent_dirs=glob(r'%s/ssh-*' % TMPDIR)
   my_agents=[]
   for agent_dir in agent_dirs:
     # must be a directory not a symlink
@@ -38,7 +39,7 @@ def find_ssh_agents():
     if not file_owner(agent_dir) == USER:
       continue
     # must have agent.* file
-    agent_files=glob('%s/agent.*' % (agent_dir))
+    agent_files=glob(r'%s/agent.*' % (agent_dir))
     for agent_file in agent_files:
       # must be owned, and a socket file
       if not issock(agent_file):
@@ -54,7 +55,7 @@ if exists(SECRET):
 
 my_agents=find_ssh_agents()
 if my_agents==[]:
-  execve('/usr/bin/env', ['ssh-agent'])
+  execve(r'/usr/bin/env', [r'ssh-agent'])
   my_agents=find_ssh_agents()
 
 debug(extra_opts, 'extra_opts')
