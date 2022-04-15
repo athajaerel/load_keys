@@ -17,6 +17,7 @@ from config import *
 USER=environ.get(r'USER')
 ME_DIR=path[0]
 SECRET=realpath(r'%s/vaults/secret.txt' % ME_DIR)
+KEYS=realpath(r'%s/vaults/keys.yml' % ME_DIR)
 WISP_PATH=r'/dev/shm/wisp.bash'
 BIN_ENV=r'/usr/bin/env'
 BIN_AGENT=r'/usr/bin/ssh-agent'
@@ -141,7 +142,7 @@ else:
 assert password!=r'', r'Empty password entered.'
 
 # get fully decrypted JSON object from vault
-vaultblob=slurp(r'vaults/keys.yml')
+vaultblob=slurp(KEYS)
 assert vaultblob!=r'', r'Empty vault blob read.'
 debug(vaultblob, 'vault blob')
 
