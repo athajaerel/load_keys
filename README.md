@@ -17,5 +17,14 @@ One file (plus one optionally) needed for this to work:
 ## vaults/secret.txt (optional)
 
 Maybe store the vault password in here, chmod'd 0400 for convenience... or not.
-~~Add the `vault_password_file` option to ansible.cfg to automate it.~~ If the secret file exists it will be used automatically.
+If the secret file exists it will be used automatically.
 
+## Now with much faster Python version
+
+The Ansible version takes several seconds, which is inconvenient if it's in `.bashrc`. If you open terminals in quick succession, you get race condition issues.
+
+The Python version uses the same files but executes in around a quarter of a second. That's much better. Though I might see if I can shave that down a little more.
+
+Asks for the vault password if not supplied in `secret.txt`.
+
+    $ ./load_keys.py
