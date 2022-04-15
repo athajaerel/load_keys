@@ -11,27 +11,22 @@
   tasks:
 
     # Get the keys into all correctly owned ssh agents
-    # Default to user 'nobody' as this will find no agents and default
-    # to a no-op, rather than silently run with '' and do who knows
-    # what
     - name: 'Find all agents owned by this user'
-      register: sshAuthSock
+      register: 'sshAuthSock'
       become: no
-      failed_when: False
-      command:
-        argv:
-          - 'find'
-          - '/tmp'
-          - '-name'
-          - 'agent.*'
-          - '-user'
-          - '{{ lookup("env", "USER") | default("nobody") }}'
+      find:
+        file_type: 'any'
+        paths: '/tmp'
+        patterns: 'agent.*'
+        recurse: yes
 
     # TO DO: if no results, run ssh-agent and use that value in nest 0
 
+    # Default to user 'nobody' as this will find no agents and default
+    # to no-op, rather than silently run with '' and do who knows what
     - name: 'Load keys into agents'
       with_nested:
-        - '{{ sshAuthSock.stdout_lines }}'
+        - '{{ sshAuthSock.files | selectattr("pw_name", "eq", lookup("env", "USER") | default("nobody")) }}'
         - '{{ keys }}'
       include_tasks: 'block_load_keys.yml'
 ...
