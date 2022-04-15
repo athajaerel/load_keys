@@ -10,7 +10,6 @@ DEBUG_MODE=True
 USER=environ.get('USER')
 ME_DIR=path[0]
 TMPDIR='/tmp'
-SSH_SOCK='%s/ssh-agent-%s-screen' % (TMPDIR, USER)
 SECRET=realpath('%s/vaults/secret.txt' % ME_DIR)
 
 def debug(line):
@@ -44,7 +43,6 @@ def find_owned_agent():
   raise ValueError('No ssh-agent found')
 
 debug(ME_DIR)
-debug(SSH_SOCK)
 debug(SECRET)
 
 extra_opts=''
@@ -61,10 +59,6 @@ except:
 
 debug(my_agent)
 
-# if no predictable symlink found, create it
-if not (exists(SSH_SOCK) and islink(SSH_SOCK)):
-  debug('symlink not found')
-  symlink(SSH_SOCK)
 
 #/usr/bin/ansible-playbook ${ME_DIR}/load_keys.yml ${SECRET}
 
