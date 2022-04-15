@@ -43,7 +43,7 @@ def find_owned_agent():
       agent_files = glob(glob_file)
       for agent_file in agent_files:
         return agent_file
-  raise ValueError('No ssh-agent found')
+  raise ValueError('Could not find any ssh-agent owned by this user.')
 
 debug(ME_DIR, 'ME_DIR')
 debug(SECRET, 'SECRET')
