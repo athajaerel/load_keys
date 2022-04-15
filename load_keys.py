@@ -49,50 +49,21 @@ def find_ssh_agents():
       my_agents+=[agent_file]
   return my_agents
 
-extra_opts=''
-if exists(SECRET):
-  extra_opts+='--vault-password-file %s' % SECRET
-
 my_agents=find_ssh_agents()
 if my_agents==[]:
   execve(r'/usr/bin/env', [r'ssh-agent'])
   my_agents=find_ssh_agents()
 
-debug(extra_opts, 'extra_opts')
-debug(ME_DIR, 'ME_DIR')
-debug(SECRET, 'SECRET')
-debug(my_agents, 'ssh agents')
 
 #- name: 'Add keys to all owned ssh caches'
 #  vars:
 #    wisp_full_path: '/dev/shm/wisp.bash'
 #  vars_files:
 #    - 'vaults/keys.yml'
-#  gather_facts: no
-#  tasks:
-#
-#    # Get the keys into all correctly owned ssh agents
-#    # Default to user 'nobody' as this will find no agents and default
-#    # to a no-op, rather than silently run with '' and do who knows
-#    # what
-#    - name: 'Find all agents owned by this user'
-#      register: sshAuthSock
-#      become: no
-#      failed_when: False
-#      command:
-#        argv:
-#          - 'find'
-#          - '/tmp'
-#          - '-name'
-#          - 'agent.*'
-#          - '-user'
-#          - '{{ lookup("env", "USER") | default("nobody") }}'
 #
 #    # TO DO: if no results, run ssh-agent and use that value in nest 0
-#
 #    - name: 'Load keys into agents'
 #      with_nested:
 #        - '{{ sshAuthSock.stdout_lines }}'
 #        - '{{ keys }}'
 #      include_tasks: 'block_load_keys.yml'
-
