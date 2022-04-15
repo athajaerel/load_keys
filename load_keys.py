@@ -6,10 +6,10 @@ from os.path import dirname, realpath, exists, isdir, islink
 from glob import glob
 from pwd import getpwuid
 
-DEBUG_MODE=True
+from config import *
+
 USER=environ.get('USER')
 ME_DIR=path[0]
-TMPDIR='/tmp'
 SECRET=realpath('%s/vaults/secret.txt' % ME_DIR)
 
 def debug(line, prefix=None):
