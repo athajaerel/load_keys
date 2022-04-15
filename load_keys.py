@@ -2,7 +2,8 @@
 
 from sys import path
 from os import environ, stat, symlink, execve
-from os.path import dirname, realpath, exists, isdir, islink
+from os.path import dirname, realpath, exists, isdir
+from stat import S_ISSOCK
 from glob import glob
 from pwd import getpwuid
 
@@ -22,53 +23,46 @@ def debug(line, prefix=None):
 def file_owner(filename):
   return getpwuid(stat(filename).st_uid).pw_name
 
-def find_owned_agent():
-  GLOB_DIR='%s/ssh-*' % TMPDIR
-  # find all ssh agents
-  agents=glob(GLOB_DIR)
-  # find owned ssh agent
-  my_agent=''
-  for agent in agents:
-    debug(agent, 'agent')
-    # must be a directory not a symlink
-    if not isdir(agent):
-      continue
-    # must be owned
-    debug('ok', 'dir')
-    if file_owner(agent) == USER:
-      debug('yes', 'owned')
-      # must contain agent.* file
-      glob_file='%s/agent.*' % (agent)
-      debug(glob_file, 'glob_file')
-      agent_files = glob(glob_file)
-      for agent_file in agent_files:
-        return agent_file
-  raise ValueError('Could not find any ssh-agent owned by this user.')
+def issock(filename):
+  return S_ISSOCK(stat(filename).st_mode)
 
-debug(ME_DIR, 'ME_DIR')
-debug(SECRET, 'SECRET')
+def find_ssh_agents():
+  # find all ssh agents
+  agent_dirs=glob('%s/ssh-*' % TMPDIR)
+  my_agents=[]
+  for agent_dir in agent_dirs:
+    # must be a directory not a symlink
+    if not isdir(agent_dir):
+      continue
+    # must be owned by user
+    if not file_owner(agent_dir) == USER:
+      continue
+    # must have agent.* file
+    agent_files=glob('%s/agent.*' % (agent_dir))
+    for agent_file in agent_files:
+      # must be owned, and a socket file
+      if not issock(agent_file):
+        continue
+      if not file_owner(agent_file) == USER:
+        continue
+      my_agents+=[agent_file]
+  return my_agents
 
 extra_opts=''
 if exists(SECRET):
   extra_opts+='--vault-password-file %s' % SECRET
 
-debug(extra_opts, 'extra_opts')
-
-try:
-  my_agent=find_owned_agent()
-except:
+my_agents=find_ssh_agents()
+if my_agents==[]:
   execve('/usr/bin/env', ['ssh-agent'])
-  my_agent=find_owned_agent()
+  my_agents=find_ssh_agents()
 
-debug(my_agent, 'my_agent')
+debug(extra_opts, 'extra_opts')
+debug(ME_DIR, 'ME_DIR')
+debug(SECRET, 'SECRET')
+debug(my_agents, 'ssh agents')
 
-#/usr/bin/ansible-playbook ${ME_DIR}/load_keys.yml ${SECRET}
-
-#---
 #- name: 'Add keys to all owned ssh caches'
-#  hosts: 'localhost'
-#  connection: 'local'
-#  run_once: yes
 #  vars:
 #    wisp_full_path: '/dev/shm/wisp.bash'
 #  vars_files:
@@ -100,5 +94,4 @@ debug(my_agent, 'my_agent')
 #        - '{{ sshAuthSock.stdout_lines }}'
 #        - '{{ keys }}'
 #      include_tasks: 'block_load_keys.yml'
-#...
 
