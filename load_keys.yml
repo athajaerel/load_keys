@@ -25,6 +25,7 @@
     # Default to user 'nobody' as this will find no agents and default
     # to no-op, rather than silently run with '' and do who knows what
     - name: 'Load keys into agents'
+      no_log: yes
       with_nested:
         - '{{ sshAuthSock.files | selectattr("pw_name", "eq", lookup("env", "USER") | default("nobody")) }}'
         - '{{ keys }}'
