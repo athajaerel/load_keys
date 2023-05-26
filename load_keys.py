@@ -176,8 +176,10 @@ echo '%s'
     chmod(WISP_PATH, 0o755)
     # add key to agent
     rside, wside = pipe()
+    # add env vars to environment, so we can use the SSH_ASKPASS trick
     environ.update({ 'SSH_AUTH_SOCK': agent })
     environ.update({ 'SSH_ASKPASS': WISP_PATH })
+    environ.update({ 'SSH_ASKPASS_REQUIRE': 'force' })
     environ.update({ 'DISPLAY': '' })
     if not fork():
       childpostfork(rside, wside);
