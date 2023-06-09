@@ -1,0 +1,4 @@
+.tup
+build-*/
+*.cfg
+go.sum

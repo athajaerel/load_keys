@@ -1,0 +1,9 @@
+GO=/bin/go
+VERSION=0.0.1
+LDFLAGS  =-X 'main.build_mode="@(LOGLEVEL)"'
+LDFLAGS+= -X 'main.app_name="@(APPNAME)"'
+LDFLAGS+= -X 'main.app_exename="@(APPNAME)"'
+LDFLAGS+= -X 'main.app_version="$(VERSION)"'
+LDFLAGS+= -X 'main.conf_default_file="@(FILE)"'
+
+: *.go |> $(GO) build -o %o -ldflags="$(LDFLAGS)" %f |> @(APPNAME)
