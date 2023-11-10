@@ -35,6 +35,7 @@ func main() {
 		loglevel = DEBUG
 	}
 	// TODO: correct this so not repeating var name
+	// I've done this elsewhere, look it up.
 	args, _ := docopt.ParseArgs(
 		fmt.Sprintf(
 			docopt_str,
@@ -52,7 +53,5 @@ func main() {
 	c := Control{
 		args: args,
 		loglevel: loglevel}
-	c.begin()
 	c.run()
-	c.end()
 }

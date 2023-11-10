@@ -15,7 +15,7 @@ const (
 	DEBUG = _loglevel(3)
 )
 
-var prefixes = [4]string {"[X.X]", "[o.O]", "[o.o]", "[-.-]"}
+var prefixes = [4]string {"[OwO]", "[o.O]", "[o.o]", "[-.-]"}
 
 type View struct {
 	loglevel _loglevel
