@@ -17,6 +17,8 @@ const (
 
 var prefixes = [4]string {"[OwO]", "[o.O]", "[o.o]", "[-.-]"}
 
+const timeFmt = "2006-01-02 15:04:05.000000 UTC "
+
 type View struct {
 	loglevel _loglevel
 	HasTime bool
@@ -26,8 +28,7 @@ type View struct {
 func (re View) log(i _loglevel, s string) {
 	if re.loglevel >= i {
 		if re.HasTime {
-			fmt.Print(time.Now())
-			fmt.Print(" ")
+			fmt.Print(time.Now().UTC().Format(timeFmt))
 		}
 		if re.HasPrefix {
 			fmt.Print(prefixes[i])

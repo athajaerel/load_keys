@@ -1,3 +1,2 @@
-vaults/keys.yml
-vaults/secret.txt
-__pycache__/
+vaults
+__pycache__

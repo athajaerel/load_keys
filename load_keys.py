@@ -188,4 +188,3 @@ echo '%s'
       execve(BIN_ADD, [BIN_ADD, key['path']], environ)
       raise ValueError('Failed to exec ssh-agent')
     parentpostfork(rside, wside)
-...

@@ -6,7 +6,9 @@ import (
 	"path/filepath"
 	"errors"
 	"strings"
+	"regexp"
 	"fmt"
+	"gopkg.in/yaml.v3"
 	"github.com/docopt/docopt-go"
 	//"github.com/bitfield/script"
 	"github.com/FatmanUK/fatgo/serialisers"
@@ -17,10 +19,13 @@ import (
 const conf_version = 0.2
 const conf_secret = "vaults/secret.txt"
 const conf_keys = "vaults/keys.yml"
+
 var conf_wisp = "/dev/shm/wisp.bash"
 var conf_bin_env = "/usr/bin/env"
 var conf_bin_agent = "/usr/bin/ssh-agent"
 var conf_bin_add = "/usr/bin/ssh-add"
+
+type hashmap map[string]string
 
 type Config struct {
 	version float32
@@ -41,7 +46,16 @@ type Control struct {
 	conf_name string
 }
 
-type hashmap map[string]string
+type KeySecret struct {
+	Name string		`yaml:"name"`
+	Path string		`yaml:"path"`
+	Password string		`yaml:"password"`
+	password_plain string
+}
+
+type KeysArray struct {
+	Keys []KeySecret	`yaml:"keys"`
+}
 
 func (re *Control) serialise(s serialisers.Serialiser) {
 	s.IoF(&re.data.version)
@@ -60,10 +74,37 @@ func get_env_vars() hashmap {
 	return env
 }
 
+func get_keys(keys string, secret string) KeysArray {
+	var Keys KeysArray
+	content, _ := os.ReadFile(keys)
+	yaml.Unmarshal(content, &Keys)
+	for i := range Keys.Keys {
+		Keys.Keys[i].password_plain, _ = vault.Decrypt(secret, Keys.Keys[i].Password)
+		//fmt.Println("Key! ", Keys.Keys[i].password_plain, " / ", Keys.Keys[i].Password)
+	}
+	return Keys
+}
+
+func get_agents() string {
+	r := regexp.MustCompile("^/tmp/ssh-.{12}/agent.[0-9]{5}$")
+	files, _ := script.FindFiles("/tmp").MatchRegexp(r).String()
+	return files
+}
+
+func load_keys(key KeySecret, file string, conf *Config) {
+	// add key
+	os.Setenv("SSH_AUTH_SOCK", file)
+	os.Setenv("SSH_ASKPASS", conf.wisp)
+	os.Setenv("DISPLAY", "")
+	command := conf.bin_add + " " + key.Path
+	fmt.Println("Command: " + command)
+	script.Exec(command)
+}
+
 func (re *Control) run() {
 	re.view = &View{
 		loglevel: re.loglevel,
-		HasTime: false,
+		HasTime: true,
 		HasPrefix: true}
 	re.model = &Model{
 		view: re.view}
@@ -72,6 +113,7 @@ func (re *Control) run() {
 	re.conf_name = strings.Replace(re.conf_name, "~/", "/home/" + env["USER"] + "/", 1)
 	re.conf_name = strings.Replace(re.conf_name, "~", "/home/", 1)
 	re.conf_name = strings.Replace(re.conf_name, "$USER", env["USER"], 1)
+
 	re.load_config()
 	re.view.log(INFO, fmt.Sprintf("Config format version: %.1f", re.data.version))
 	re.view.log(INFO, "Starting program.")
@@ -217,6 +259,27 @@ echo '%s'
       execve(BIN_ADD, [BIN_ADD, key['path']], environ)
       raise ValueError('Failed to exec ssh-agent')
     parentpostfork(rside, wside)
+
+
+        keys := get_keys(re.data.keys, re.data.secret)
+
+        files := ""
+        for files = get_agents(); files == ""; {
+                script.Exec(re.data.bin_agent)
+        }
+        fileList := strings.Split(files, "\n")
+        for _, key := range keys.Keys {
+                // create wisp script
+                wisp_script := []string{"#!/bin/bash", "echo \"" + key.password_plain + "\""}
+                script.Slice(wisp_script).WriteFile(re.data.wisp)
+                script.Exec(re.data.bin_env + " chmod 0755 " + re.data.wisp)
+                script.Exec("ls -lha " + re.data.wisp).Stdout()
+                for _, file := range fileList {
+                        load_keys(key, file, re.data)
+                }
+                // destroy wisp
+                script.Exec(re.data.bin_env + " rm " + re.data.wisp)
+        }
 */
 }
 
@@ -251,6 +314,7 @@ func (re *Control) load_config() {
 		DEBUG,
 		fmt.Sprintf("Buffer read"))
 	re.serialise(&serialisers.Loader{Array: &buf})
+	zero_buffer(&buf)
 	re.view.log(
 		DEBUG,
 		fmt.Sprintf("Loading done"))
@@ -266,4 +330,5 @@ func (re *Control) save_config() {
 	// Should the buffer be the responsibility of the Model object?
 	re.serialise(&serialisers.Saver{Array: &buf})
 	write_binary_file(&buf, re.conf_name, re.view)
+	zero_buffer(&buf)
 }
