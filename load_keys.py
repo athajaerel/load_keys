@@ -151,6 +151,7 @@ myobj=None
 if isyaml(vaultblob):
   myobj=objectfromyaml(vaultblob)
   myobj=jsonwalk(myobj, decryptfield, password)
+  myobj=[ myobj ]
 else:
   # otherwise, decrypt as a blob and confirm it's JSON
   # TODO

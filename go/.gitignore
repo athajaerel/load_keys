@@ -2,3 +2,7 @@
 build-*/
 *.cfg
 go.sum
+
+# when compiling directly (not tup)
+loadkeys
+loadkeys-d

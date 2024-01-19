@@ -1,39 +1,26 @@
 package main
 
+// TODO: the size of this import bit suggests I have too many responsibilities
+// going on in this module. Split off some classes.
 import (
 	"os"
+	"fmt"
+	"strings"
+	"syscall"
 	"path"
 	"path/filepath"
 	"errors"
-	"strings"
-	"fmt"
-	"github.com/docopt/docopt-go"
-	//"github.com/bitfield/script"
-	"github.com/FatmanUK/fatgo/serialisers"
-	"syscall"
+//	//"github.com/bitfield/script"
 	"golang.org/x/term"
+	"io/fs"
+	"io/ioutil"
+	"strconv"
 )
 
-const conf_version = 0.2
-const conf_secret = "vaults/secret.txt"
-const conf_keys = "vaults/keys.yml"
-var conf_wisp = "/dev/shm/wisp.bash"
-var conf_bin_env = "/usr/bin/env"
-var conf_bin_agent = "/usr/bin/ssh-agent"
-var conf_bin_add = "/usr/bin/ssh-add"
-
-type Config struct {
-	version float32
-	secret string
-	keys string
-	wisp string
-	bin_env string
-	bin_agent string
-	bin_add string
-}
+type hashmap map[string]string
 
 type Control struct {
-	args docopt.Opts
+	args map[string]interface{}
 	model *Model
 	view *View
 	loglevel _loglevel
@@ -41,22 +28,15 @@ type Control struct {
 	conf_name string
 }
 
-type hashmap map[string]string
-
-func (re *Control) serialise(s serialisers.Serialiser) {
-	s.IoF(&re.data.version)
-	s.IoS(&re.data.secret)
-	s.IoS(&re.data.keys)
-	s.IoS(&re.data.wisp)
-	s.IoS(&re.data.bin_env)
-	s.IoS(&re.data.bin_agent)
-	s.IoS(&re.data.bin_add)
-}
-
+// TODO: think about: maybe this should be a standard part of the Model? (env processing)
+// Alternatively, get rid. Might not be worth doing at all.
 func get_env_vars() hashmap {
 	var env hashmap
 	env = make(hashmap)
+	// TODO: get all defined user env vars
 	env["USER"] = os.Getenv("USER")
+// Answer: turns out UID is not an env var, it's a bash internal variable. Goddamnit bash.
+//	env["UID"] = os.Getuid() // BUG: This is returning nothing for some reason? Try os.Environ instead?
 	return env
 }
 
@@ -68,6 +48,7 @@ func (re *Control) run() {
 	re.model = &Model{
 		view: re.view}
 	env := get_env_vars()
+	re.view.log(DEBUG, "UID var: " + os.Getenv("UID"))
 	re.conf_name = re.args["-c"].(string)
 	re.conf_name = strings.Replace(re.conf_name, "~/", "/home/" + env["USER"] + "/", 1)
 	re.conf_name = strings.Replace(re.conf_name, "~", "/home/", 1)
@@ -79,52 +60,82 @@ func (re *Control) run() {
 	re.view.log(INFO, "Stopping program.")
 }
 
-func (re *Control) find_ssh_agents() []string {
-/*
-  # find all ssh agents
-  agent_dirs=glob(r'%s/ssh-*' % TMPDIR)
-  my_agents=[]
-  for agent_dir in agent_dirs:
-    # must be a directory not a symlink
-    if not isdir(agent_dir):
-      continue
-    # must be owned by user
-    if not file_owner(agent_dir) == USER:
-      continue
-    # must have agent.* file
-    agent_files=glob(r'%s/agent.*' % (agent_dir))
-    for agent_file in agent_files:
-      # must be owned, and a socket file
-      if not issock(agent_file):
-        continue
-      if not file_owner(agent_file) == USER:
-        continue
-      my_agents+=[agent_file]
-  return my_agents
-*/
-	// BUG hardcode until implemented, will need updating each boot so do it soon :(
-	arr := []string{
-		"/tmp/ssh-XXXXXX091x9C/agent.3410322",
-		"/tmp/ssh-XXXXXXTBJjny/agent.3410291",
-		"/tmp/ssh-XXXXXXrtcUhf/agent.6954",
+// TODO: could put these three in a general "file utilities" library module.
+func (re *Control) list_files_with_prefix(dir string, prefix string) []string {
+	files, err := ioutil.ReadDir(dir)
+	die_if(err, re.view)
+	var rv []string
+	for _, f := range files {
+		if strings.HasPrefix(f.Name(), prefix) {
+			rv = append(rv, path.Join(dir, f.Name()))
 		}
-	return arr[:]
+	}
+	return rv
+}
+
+func (re *Control) is_socket_file(stat fs.FileInfo) bool {
+	file_type_mode := stat.Mode() & fs.ModeSocket
+	msg := "is socket: "
+	if file_type_mode == fs.ModeSocket {
+		msg += "yes"
+	} else {
+		msg += "no"
+	}
+	re.view.log(DEBUG, msg)
+	return (file_type_mode == fs.ModeSocket)
+}
+
+func (re *Control) is_owned(stat fs.FileInfo, want_uid int) bool {
+	// Very weird that there's no other way to do this
+	s, _ := stat.Sys().(*syscall.Stat_t)
+	msg := "is owned by running user: "
+	if int(s.Uid) == want_uid {
+		msg += "yes"
+	} else {
+		msg += "no ("
+		msg += strconv.FormatInt(int64(s.Uid), 10)
+		msg += "/"
+		msg += strconv.FormatInt(int64(want_uid), 10)
+		msg += ")"
+	}
+	re.view.log(DEBUG, msg)
+	return (int(s.Uid) == want_uid)
+}
+
+// TODO: these two can go in a "ssh-agent finder" module. Too specific to be a library.
+func (re *Control) find_ssh_agents() []string {
+	agent_dirs := re.list_files_with_prefix("/tmp", "ssh-X")
+	var my_agents []string
+	//env := get_env_vars()
+	for _, f := range agent_dirs {
+		list := re.list_files_with_prefix(f, "agent.")
+		// don't like n^2 funcs, but oh well :(
+		// should(tm) be small n at least
+		for _, g := range list {
+			stat, _ := os.Stat(g)
+			if re.is_socket_file(stat) && re.is_owned(stat, os.Getuid()) {
+				my_agents = append(my_agents, g)
+			}
+		}
+	}
+	return my_agents
 }
 
 func (re *Control) get_owned_ssh_agents() []string {
 	my_agents := re.find_ssh_agents()
+	re.view.log(DEBUG, "There are " + strconv.FormatInt(int64(len(my_agents)), 10) + " agents")
 	if len(my_agents) == 0 {
 		// fork into agent if none owned
-/*
-  rside, wside = pipe()
-  if not fork():
-    childpostfork(rside, wside);
-    # Execute the desired program, replace the program image,
-    # doesn't return
-    execve(BIN_ENV, [BIN_ENV, BIN_AGENT], environ)
-    raise ValueError('Failed to exec ssh-agent')
-  parentpostfork(rside, wside)
-*/
+		var argv []string
+		argv = append(argv, re.data.bin_env)
+		argv = append(argv, re.data.bin_agent)
+
+		// TODO: test this where there are no agents, not sure it works
+		p := &syscall.ProcAttr{ }
+		syscall.ForkExec(argv[0], argv, p)
+		re.view.log(ERROR, "Fork failed.")
+		die_if(nil, re.view) // shouldn't make it here --- always die
+
 		my_agents = re.find_ssh_agents()
 	}
 	if len(my_agents) == 0 {
@@ -134,6 +145,7 @@ func (re *Control) get_owned_ssh_agents() []string {
 	return my_agents
 }
 
+// TODO: put in a generic utility library.
 func (re *Control) get_password(secret_file string) string {
 	password, err := os.ReadFile(secret_file)
 	if err != nil {
@@ -147,6 +159,7 @@ func (re *Control) get_password(secret_file string) string {
 	return string(password)
 }
 
+// This is the main flow function. As such, probably needs to remain here. Or re-integrate into parent. Or dis-integrate into minor functions.
 func (re *Control) load_keys() {
 	me_dir := filepath.Dir(os.Args[0])
 	re.view.log(DEBUG, "Path: " + me_dir)
@@ -165,10 +178,18 @@ func (re *Control) load_keys() {
 
 	// Get owned SSH agents, or start one.
 	my_agents := re.get_owned_ssh_agents()
+	re.view.log(DEBUG, "Agents available:")
+	for _, f := range my_agents {
+		re.view.log(DEBUG, f)
+	}
+
 
 	// Get secret from file or keyboard.
-	password := re.get_password(secret_file)
-	re.view.log(DEBUG, "Password: " + (string)(password))
+//	password := re.get_password(secret_file)
+        // don't print the password you dolt!
+	//re.view.log(DEBUG, "Password: " + (string)(password))
+
+
 /*
 # get fully decrypted JSON object from vault
 vaultblob=slurp(KEYS)
@@ -220,8 +241,10 @@ echo '%s'
 */
 }
 
+// TODO: could possibly put these in Config. Is it worth the effort? Maybe.
 func (re *Control) load_config() {
 	_, err := os.Stat(re.conf_name)
+	// TODO: move defaults to Config module?
 	re.data = &Config{
 		conf_version,
 		conf_secret,
@@ -250,7 +273,7 @@ func (re *Control) load_config() {
 	re.view.log(
 		DEBUG,
 		fmt.Sprintf("Buffer read"))
-	re.serialise(&serialisers.Loader{Array: &buf})
+	re.data.load(&buf)
 	re.view.log(
 		DEBUG,
 		fmt.Sprintf("Loading done"))
@@ -260,10 +283,8 @@ func (re *Control) save_config() {
 	re.view.log(
 		DEBUG,
 		fmt.Sprintf("Saving config: %s", re.conf_name))
-	var buf_size uint64 = 0
-	re.serialise(&serialisers.Sizer{&buf_size})
-	buf := make([]byte, buf_size)
+	buf := make([]byte, re.data.size())
 	// Should the buffer be the responsibility of the Model object?
-	re.serialise(&serialisers.Saver{Array: &buf})
+	re.data.save(&buf)
 	write_binary_file(&buf, re.conf_name, re.view)
 }
